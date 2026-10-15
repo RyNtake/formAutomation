@@ -24,6 +24,15 @@ const CONFIG = {
   DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/1556728610121973940/YCqey3O9n5_uRVWU_iXn-GhCF1NNHRmBpZhvdq4DVFFq6mqwU2SacVaNYMRHxC9GtLXs"
 };
 
+function getFormText(rawData, keys) {
+  for (const key of keys) {
+    if (Object.prototype.hasOwnProperty.call(rawData, key)) {
+      return String(rawData[key] == null ? "" : rawData[key]).trim();
+    }
+  }
+  return "";
+}
+
 /**
  * フォーム送信時メインハンドラー
  */
@@ -93,8 +102,8 @@ function onFormSubmitHandler(e) {
       instruction: String(rawData["指導内容・ポイント・解説1"] || rawData["指導内容・ポイント・解説"] || "").trim(),
       carryover: String(rawData["次回持越し1"] || rawData["次回持越し"] || "").trim(),
       notice: String(rawData["連絡事項1"] || rawData["連絡事項"] || "").trim(),
-      exercise: String(rawData["演習1"] || rawData["演習"] || rawData["範囲メモ1"] || "（なし）").trim(),
-      homework: String(rawData["宿題1"] || rawData["宿題"] || rawData["次回持越し1"] || "（なし）").trim()
+      exercise: getFormText(rawData, ["演習1", "演習"]) || "なし",
+      homework: getFormText(rawData, ["宿題1", "宿題"]) || "なし"
     });
   }
 
@@ -110,8 +119,8 @@ function onFormSubmitHandler(e) {
       instruction: String(rawData["指導内容・ポイント・解説2"] || "").trim(),
       carryover: String(rawData["次回持越し2"] || "").trim(),
       notice: String(rawData["連絡事項2"] || "").trim(),
-      exercise: String(rawData["演習2"] || rawData["範囲メモ2"] || "（なし）").trim(),
-      homework: String(rawData["宿題2"] || rawData["次回持越し2"] || "（なし）").trim()
+      exercise: getFormText(rawData, ["演習2"]) || "なし",
+      homework: getFormText(rawData, ["宿題2"]) || "なし"
     });
   }
 
@@ -175,9 +184,9 @@ function onFormSubmitHandler(e) {
         st.subject,        // D: 教科
         displayDueDate,    // E: 提出期限
         st.folderUrl,      // F: 提出フォルダURL
-        "未",              // G: 演習提出
+        st.exercise === "なし" ? "免除" : "未", // G: 演習提出
         "",                // H: 演習提出日時
-        "未",              // I: 宿題提出
+        st.homework === "なし" ? "免除" : "未", // I: 宿題提出
         "",                // J: 宿題提出日時
         "進行中",          // K: ステータス
         st.folderId        // L: フォルダID(管理用)
@@ -504,7 +513,7 @@ function checkSubmissions() {
         const updatedTime = Utilities.formatDate(file.getLastUpdated(), "Asia/Tokyo", "yyyy/MM/dd HH:mm");
 
         // 演習ファイルの新規検知
-        if (exerciseStatus !== "済" && fileName.includes("演習")) {
+        if (exerciseStatus !== "済" && exerciseStatus !== "免除" && fileName.includes("演習")) {
           sheet.getRange(r + 1, 7).setValue("済");
           if (!currentExTime) {
             sheet.getRange(r + 1, 8).setValue(updatedTime);
@@ -523,7 +532,7 @@ function checkSubmissions() {
         }
 
         // 宿題ファイルの新規検知
-        if (homeworkStatus !== "済" && fileName.includes("宿題")) {
+        if (homeworkStatus !== "済" && homeworkStatus !== "免除" && fileName.includes("宿題")) {
           sheet.getRange(r + 1, 9).setValue("済");
           if (!currentHwTime) {
             sheet.getRange(r + 1, 10).setValue(updatedTime);
@@ -543,7 +552,9 @@ function checkSubmissions() {
       }
 
       // 両方揃った場合は「提出済み」へ更新
-      if (exerciseStatus === "済" && homeworkStatus === "済" && status !== "提出済み") {
+      const exerciseComplete = exerciseStatus === "済" || exerciseStatus === "免除";
+      const homeworkComplete = homeworkStatus === "済" || homeworkStatus === "免除";
+      if (exerciseComplete && homeworkComplete && status !== "提出済み") {
         sheet.getRange(r + 1, 11).setValue("提出済み");
       }
     } catch (e) {
