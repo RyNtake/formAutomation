@@ -22,8 +22,6 @@ function regeneratePdfOnly(rowNumber = 67) {
   }
   const dateStr = Utilities.formatDate(dateObj, "Asia/Tokyo", "yyyyMMdd");
   const displayDate = Utilities.formatDate(dateObj, "Asia/Tokyo", "yyyy年M月d日");
-  const dueDateObj = new Date(dateObj.getTime() + (5 * 24 * 60 * 60 * 1000));
-  const displayDueDate = Utilities.formatDate(dueDateObj, "Asia/Tokyo", "yyyy年M月d日");
 
   // 生徒データパース
   const students = [];
@@ -34,6 +32,7 @@ function regeneratePdfOnly(rowNumber = 67) {
       subject: String(rawData["教科1"] || rawData["教科"] || "").trim(),
       division: String(rawData["区分1"] || rawData["区分"] || "通常").trim(),
       textbook: String(rawData["教材1"] || rawData["教材"] || "").trim(),
+      notice: String(rawData["連絡事項1"] || rawData["連絡事項"] || "").trim(),
       exercise: String(rawData["演習1"] || rawData["演習"] || rawData["範囲メモ1"] || "（なし）").trim(),
       homework: String(rawData["宿題1"] || rawData["宿題"] || rawData["次回持越し1"] || "（なし）").trim()
     });
@@ -46,6 +45,7 @@ function regeneratePdfOnly(rowNumber = 67) {
       subject: String(rawData["教科2"] || "").trim(),
       division: String(rawData["区分2"] || "通常").trim(),
       textbook: String(rawData["教材2"] || "").trim(),
+      notice: String(rawData["連絡事項2"] || "").trim(),
       exercise: String(rawData["演習2"] || rawData["範囲メモ2"] || "（なし）").trim(),
       homework: String(rawData["宿題2"] || rawData["次回持越し2"] || "（なし）").trim()
     });
@@ -55,6 +55,14 @@ function regeneratePdfOnly(rowNumber = 67) {
     Logger.log(`${rowNumber}行目に生徒データが見つかりませんでした。`);
     return;
   }
+
+  students.forEach(st => {
+    st.displayDueDate = Utilities.formatDate(
+      getDueDate(dateObj, st.notice),
+      "Asia/Tokyo",
+      "yyyy年M月d日"
+    );
+  });
 
   // 提出用WebアプリのURL（演習宿題を自動生成.gsと共通）
   const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxSTQWTFsi4cQCV4_rYBiK4NpzgV3_J3HMaagEc7kOX30_rQoKdvD-TZwrGEjyiwUeH/exec";
@@ -82,7 +90,7 @@ function regeneratePdfOnly(rowNumber = 67) {
 
   // PDF生成
   const printFolder = DriveApp.getFolderById(CONFIG.PRINT_TMP_FOLDER_ID);
-  const combinedHtml = generateCombinedCardHtml(students, displayDate, displayDueDate);
+  const combinedHtml = generateCombinedCardHtml(students, displayDate);
   const blob = HtmlService.createHtmlOutput(combinedHtml).getAs(MimeType.PDF);
   const baseName = students.map(s => s.name).join("・");
   blob.setName(`${baseName}_${dateStr}.pdf`);

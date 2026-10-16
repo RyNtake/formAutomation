@@ -66,6 +66,16 @@ test("form text uses the first present field and trims it", () => {
   assert.equal(gas.getFormText({ 演習: " p.10 " }, ["演習1", "演習"]), "p.10");
 });
 
+test("deadline commands adjust the default five-day deadline", () => {
+  const gas = loadGasScript("演習宿題を自動生成.js");
+  const lessonDate = new Date("2026-10-15T00:00:00.000Z");
+
+  assert.equal(gas.getDueDate(lessonDate, "dl -3").toISOString(), "2026-10-17T00:00:00.000Z");
+  assert.equal(gas.getDueDate(lessonDate, "dl +3").toISOString(), "2026-10-23T00:00:00.000Z");
+  assert.equal(gas.getDueDate(lessonDate, "通常の連絡事項").toISOString(), "2026-10-20T00:00:00.000Z");
+  assert.equal(gas.getDueDate(lessonDate, "dl -3 追記").toISOString(), "2026-10-20T00:00:00.000Z");
+});
+
 test("folder helper reuses an existing folder instead of creating a duplicate", () => {
   const gas = loadGasScript("演習宿題を自動生成.js");
   const existingFolder = { id: "existing" };
@@ -106,6 +116,20 @@ test("card HTML includes student details and a page break between students", () 
   assert.match(html, /\.footer-area\s*\{[^}]*height:\s*180px/s);
   assert.match(html, /\.qr-box\s*\{[^}]*align-self:\s*flex-start/s);
   assert.match(html, /\.qr-img\s*\{[^}]*width:\s*160px;[^}]*height:\s*160px/s);
+});
+
+test("card HTML uses an individual deadline when provided", () => {
+  const gas = loadGasScript("演習宿題を自動生成.js");
+  const html = gas.generateCombinedCardHtml(
+    [
+      { name: "生徒A", displayDueDate: "2026年10月17日" },
+      { name: "生徒B", displayDueDate: "2026年10月23日" }
+    ],
+    "2026年10月15日"
+  );
+
+  assert.match(html, /2026年10月17日/);
+  assert.match(html, /2026年10月23日/);
 });
 
 test("submission scan records first submissions and advances the kanban status", () => {

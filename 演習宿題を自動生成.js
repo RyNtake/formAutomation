@@ -33,6 +33,19 @@ function getFormText(rawData, keys) {
   return "";
 }
 
+function getDueDateOffsetDays(notice) {
+  const match = String(notice || "").trim().match(/^dl\s+([+-]\d+)$/i);
+  if (!match) return 0;
+
+  const offsetDays = Number(match[1]);
+  return Number.isSafeInteger(offsetDays) ? offsetDays : 0;
+}
+
+function getDueDate(dateObj, notice) {
+  const dueDateOffsetDays = 5 + getDueDateOffsetDays(notice);
+  return new Date(dateObj.getTime() + (dueDateOffsetDays * 24 * 60 * 60 * 1000));
+}
+
 /**
  * フォーム送信時メインハンドラー
  */
@@ -81,10 +94,6 @@ function onFormSubmitHandler(e) {
   const dateStr = Utilities.formatDate(dateObj, "Asia/Tokyo", "yyyyMMdd");
   const displayDate = Utilities.formatDate(dateObj, "Asia/Tokyo", "yyyy年M月d日");
 
-  // 提出期限（授業日 + 5日後）
-  const dueDateObj = new Date(dateObj.getTime() + (5 * 24 * 60 * 60 * 1000));
-  const displayDueDate = Utilities.formatDate(dueDateObj, "Asia/Tokyo", "yyyy年M月d日");
-
   const email = String(rawData["メールアドレス"] || "").trim();
   const teacherName = String(rawData["講師名"] || "").trim();
 
@@ -125,6 +134,14 @@ function onFormSubmitHandler(e) {
   }
 
   if (students.length === 0) return;
+
+  students.forEach(st => {
+    st.displayDueDate = Utilities.formatDate(
+      getDueDate(dateObj, st.notice),
+      "Asia/Tokyo",
+      "yyyy年M月d日"
+    );
+  });
 
   // 3. 各生徒の授業ID採番・フォルダ作成・カンバン登録
   const rootFolder = DriveApp.getFolderById(CONFIG.HOMEWORK_ROOT_FOLDER_ID);
@@ -182,7 +199,7 @@ function onFormSubmitHandler(e) {
         dateStr,           // B: 授業日
         st.name,           // C: 生徒名
         st.subject,        // D: 教科
-        displayDueDate,    // E: 提出期限
+        st.displayDueDate, // E: 提出期限
         st.folderUrl,      // F: 提出フォルダURL
         st.exercise === "なし" ? "免除" : "未", // G: 演習提出
         "",                // H: 演習提出日時
@@ -196,7 +213,7 @@ function onFormSubmitHandler(e) {
 
   // 4. 演習宿題プリント（A5横・最大2ページ構成・QRコード付き）をPDF生成
   const printFolder = DriveApp.getFolderById(CONFIG.PRINT_TMP_FOLDER_ID);
-  const combinedHtml = generateCombinedCardHtml(students, displayDate, displayDueDate);
+  const combinedHtml = generateCombinedCardHtml(students, displayDate);
   const blob = HtmlService.createHtmlOutput(combinedHtml).getAs(MimeType.PDF);
 
   const baseName = students.map(s => s.name).join("・");
@@ -256,7 +273,7 @@ function generateCombinedCardHtml(students, displayDate, displayDueDate) {
         <div class="footer-area">
           <div class="due-box">
             <span class="due-label">🚨 宿題提出期限</span>
-            <span class="due-text">${displayDueDate}</span>
+            <span class="due-text">${st.displayDueDate || displayDueDate}</span>
           </div>
 
           <div class="qr-box">
