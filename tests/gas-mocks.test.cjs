@@ -103,6 +103,9 @@ test("card HTML includes student details and a page break between students", () 
   assert.match(html, /生徒B さん/);
   assert.match(html, /page-break-after: always/);
   assert.match(html, /2026年10月20日/);
+  assert.match(html, /\.footer-area\s*\{[^}]*height:\s*180px/s);
+  assert.match(html, /\.qr-box\s*\{[^}]*align-self:\s*flex-start/s);
+  assert.match(html, /\.qr-img\s*\{[^}]*width:\s*160px;[^}]*height:\s*160px/s);
 });
 
 test("submission scan records first submissions and advances the kanban status", () => {

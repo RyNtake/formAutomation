@@ -1,12 +1,12 @@
 /**
  * CORE 指導報告・宿題管理 自動化スクリプト
- * 
+ *
  * 1. フォーム送信時：
  *    - フォーム回答ストレージへ展開（全14列準拠）
  *    - 授業ID発行 & 生徒別提出フォルダ自動作成
  *    - 演習宿題プリント（枠拡張6行 + 提出QRコード付き）をPDF生成
  *    - 提出カンバンシートへのタスク登録
- * 
+ *
  * 2. 定期実行時：
  *    - 提出フォルダ内の「演習.pdf」「宿題.pdf」を検知してカンバンに打刻
  */
@@ -139,21 +139,21 @@ function onFormSubmitHandler(e) {
     // フォルダ自動生成：[生徒名] ➔ [日付]
     const studentFolder = getOrCreateFolder(rootFolder, st.name);
     const dateFolder = getOrCreateFolder(studentFolder, dateStr);
-    
+
     // 生徒がアップロードできるように共有設定（リンクを知る全員が編集可）
     dateFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.EDIT);
-    
+
     st.folderId = dateFolder.getId();
     st.folderUrl = dateFolder.getUrl();
-      
+
     // 1. スキャン提出用WebアプリのURLを指定（先ほどコピーしたURLを貼り付け）
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxSTQWTFsi4cQCV4_rYBiK4NpzgV3_J3HMaagEc7kOX30_rQoKdvD-TZwrGEjyiwUeH/exec";
-    
+
     // 2. パラメータ（folderId と name）を付与した提出用URLを生成
     const submitUrl = `${WEB_APP_URL}?folderId=${st.folderId}&name=${encodeURIComponent(st.name)}`;
-    
+
     // 3. その提出用URLをQRコード画像化
-    st.qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(submitUrl)}&size=130`;
+    st.qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(submitUrl)}&size=400`;
 
     // フォーム回答ストレージへの追記（指定の全14列順）
     if (recordSheet) {
@@ -224,7 +224,7 @@ function generateCombinedCardHtml(students, displayDate, displayDueDate) {
             <td class="name-badge">${st.name} さん</td>
           </tr>
         </table>
-        
+
         <table class="meta-table">
           <tr>
             <td class="label">授業日</td>
@@ -239,7 +239,7 @@ function generateCombinedCardHtml(students, displayDate, displayDueDate) {
             <td class="val">${st.textbook || "教室教材"}</td>
           </tr>
         </table>
-        
+
         <!-- 演習・宿題枠：6行ゆったり入る高さ(205px) -->
         <div class="columns">
           <div class="col-box">
@@ -251,14 +251,14 @@ function generateCombinedCardHtml(students, displayDate, displayDueDate) {
             <div class="content-text">${st.homework}</div>
           </div>
         </div>
-        
+
         <!-- 下部：提出期限 ＋ QRコード案内 -->
         <div class="footer-area">
           <div class="due-box">
             <span class="due-label">🚨 宿題提出期限</span>
             <span class="due-text">${displayDueDate}</span>
           </div>
-          
+
           <div class="qr-box">
             <img class="qr-img" src="${st.qrUrl}" alt="提出用QR" />
             <div class="qr-desc">
@@ -385,7 +385,7 @@ function generateCombinedCardHtml(students, displayDate, displayDueDate) {
       display: flex;
       gap: 10px;
       align-items: center;
-      height: 60px;
+      height: 160px;
     }
     .due-box {
       flex: 1;
@@ -410,6 +410,7 @@ function generateCombinedCardHtml(students, displayDate, displayDueDate) {
     }
     .qr-box {
       flex: 1.3;
+      align-self: flex-start;
       border: 1.5px solid #cbd5e1;
       border-radius: 6px;
       padding: 4px 8px;
@@ -419,8 +420,8 @@ function generateCombinedCardHtml(students, displayDate, displayDueDate) {
       gap: 8px;
     }
     .qr-img {
-      width: 50px;
-      height: 50px;
+      width: 160px;
+      height: 160px;
     }
     .qr-desc {
       display: flex;
@@ -485,7 +486,7 @@ function checkSubmissions() {
   for (let r = 1; r < data.length; r++) {
     const row = data[r];
     const status = row[10];      // K列: 状況
-    
+
     // すでに丸付け以降のフェーズに進んでいる行はスキップ
     if (status === "丸付け済み" || status === "返却済み" || status === "完了") {
       continue;
@@ -519,7 +520,7 @@ function checkSubmissions() {
             sheet.getRange(r + 1, 8).setValue(updatedTime);
           }
           exerciseStatus = "済";
-          
+
           // Discord通知を送信
           sendDiscordNotification({
             type: "演習",
@@ -538,7 +539,7 @@ function checkSubmissions() {
             sheet.getRange(r + 1, 10).setValue(updatedTime);
           }
           homeworkStatus = "済";
-          
+
           // Discord通知を送信
           sendDiscordNotification({
             type: "宿題",

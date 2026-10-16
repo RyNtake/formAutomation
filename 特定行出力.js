@@ -2,7 +2,7 @@
  * RECORD_SHEET_NAMEから指定した行番号の宿題プリントPDFのみを再生成する
  * @param {number} rowNumber スプレッドシートの行番号（ヘッダーが1行目の場合、データは2行目以降）
  */
-function regeneratePdfOnly(rowNumber = 48) {
+function regeneratePdfOnly(rowNumber = 67) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const entrySheet = ss.getSheetByName(CONFIG.RECORD_SHEET_NAME);
   const headers = entrySheet.getRange(1, 1, 1, entrySheet.getLastColumn()).getValues()[0];
@@ -68,7 +68,7 @@ function regeneratePdfOnly(rowNumber = 48) {
     }
     const studentFolder = getOrCreateFolder(rootFolder, st.name);
     const dateFolder = getOrCreateFolder(studentFolder, dateStr);
-    
+
     // フォルダIDの取得
     st.folderId = dateFolder.getId();
     st.folderUrl = dateFolder.getUrl();
